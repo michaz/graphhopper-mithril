@@ -9,6 +9,9 @@
 </head>
 <body>
 <script>
+
+
+
     var graphHopper = {
         Request: function(data) {
 
@@ -24,6 +27,21 @@
                         attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
                         maxZoom: 18
                     }).addTo(mymap);
+                    var origin = L.marker(routePlanner.vm.origin(),{draggable: true});
+                    origin.on('dragend', function() {
+                        m.startComputation();
+                        routePlanner.vm.origin(origin.getLatLng());
+                        m.endComputation();
+                    });
+                    var destination = L.marker(routePlanner.vm.destination(),{draggable: true});
+                    destination.on('dragend', function() {
+                        m.startComputation();
+                        routePlanner.vm.destination(destination.getLatLng());
+                        m.endComputation();
+                    });
+                    var inputPoints = L.featureGroup([origin, destination]);
+                    inputPoints.addTo(mymap);
+                    mymap.fitBounds(inputPoints.getBounds());
                 }
             }});
         }
@@ -33,8 +51,8 @@
     var routePlanner = {
         vm: {
             init: function() {
-                routePlanner.vm.origin = m.prop('52.514132,13.496361');
-                routePlanner.vm.destination = m.prop('52.53314,13.424606');
+                routePlanner.vm.origin = m.prop(L.latLng(52.514132, 13.496361));
+                routePlanner.vm.destination = m.prop(L.latLng(52.53314, 13.424606));
                 routePlanner.vm.response = m.prop();
             }
         },
@@ -60,7 +78,7 @@
                             ])
                         ]),
                         m("button", {onclick: function() {
-                            routePlanner.vm.response(m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin()+"&point="+routePlanner.vm.destination()+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false&points_encoded=false"}));
+                            routePlanner.vm.response(m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false&points_encoded=false"}));
                         }}, "Get route")
                     ]),
                     m.component(Map),
