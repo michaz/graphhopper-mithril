@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GraphHopper Directions</title>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/0.2.5/mithril.min.js"></script>
+</head>
+<body>
+<script>
+    var graphHopper = {
+        Request: function(data) {
+
+        }
+    };
+
+    var routePlanner = {
+        vm: {
+            init: function() {
+                routePlanner.vm.origin = m.prop('52.514132,13.496361');
+                routePlanner.vm.destination = m.prop('52.53314,13.424606');
+                routePlanner.vm.response = m.prop();
+            }
+        },
+        controller: function() {
+            routePlanner.vm.init();
+        },
+        view: function() {
+            return m("html", [
+                m("body", [
+                    m("div", [
+                        m("table", [
+                            m("tr", [
+                                m("td", [
+                                    m("input", {onchange: m.withAttr("value", routePlanner.vm.origin), value:routePlanner.vm.origin()})
+                                ]),
+                                m("td", "origin")
+                            ]),
+                            m("tr", [
+                                m("td", [
+                                    m("input", {onchange: m.withAttr("value", routePlanner.vm.destination), value:routePlanner.vm.destination()})
+                                ]),
+                                m("td", "destination")
+                            ])
+                        ]),
+                        m("button", {onclick: function() {
+                            routePlanner.vm.response(m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin()+"&point="+routePlanner.vm.destination()+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false"}));
+                        }}, "Get route")
+                    ]),
+                    m("div", JSON.stringify(routePlanner.vm.response()))
+                ])
+            ]);
+        }
+    };
+
+
+    m.mount(document.body, {controller: routePlanner.controller, view: routePlanner.view});
+</script>
+</body>
+</html>
