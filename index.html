@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>GraphHopper Directions</title>
     <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/0.2.5/mithril.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
 </head>
 <body>
 <script>
@@ -12,6 +14,21 @@
 
         }
     };
+
+    var Map = {
+        view: function() {
+            return m("div", {style: "height:180px", config: function(element, isInitialized) {
+                if (!isInitialized) {
+                    var mymap = L.map(element).setView([51.505, -0.09], 13);
+                    L.tileLayer('http://a.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
+                        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+                        maxZoom: 18
+                    }).addTo(mymap);
+                }
+            }});
+        }
+    };
+
 
     var routePlanner = {
         vm: {
@@ -46,6 +63,7 @@
                             routePlanner.vm.response(m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin()+"&point="+routePlanner.vm.destination()+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false&points_encoded=false"}));
                         }}, "Get route")
                     ]),
+                    m.component(Map),
                     m("div", JSON.stringify(routePlanner.vm.response()))
                 ])
             ]);
