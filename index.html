@@ -45,8 +45,14 @@
                 }
                 Map.view.responseLayer.clearLayers();
                 if (args.response() != null) {
-                    args.response().paths.forEach(function(path) {
-                        L.geoJson(path.points).addTo(Map.view.responseLayer);
+                    args.response().paths.forEach(function(path, index) {
+                        var feature = L.geoJson(path.points);
+                        if (index == routePlanner.vm.checkedPath()) {
+                            feature.setStyle({color: "#00cc33", "weight": 6, "opacity": 0.8});
+                        } else {
+                            feature.setStyle({color: "darkgray", "weight": 6, "opacity": 0.8});
+                        }
+                        feature.addTo(Map.view.responseLayer);
                     })
                 }
             }});
@@ -59,7 +65,7 @@
             init: function() {
                 routePlanner.vm.origin = m.prop(L.latLng(m.route.param("point")[0].split(',')));
                 routePlanner.vm.destination = m.prop(L.latLng(m.route.param("point")[1].split(',')));
-
+                routePlanner.vm.checkedPath = m.prop(0);
                 routePlanner.vm.doRequest = function() {
                     return m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false&points_encoded=false"});
                 }
@@ -93,8 +99,18 @@
                             ])
                         ]),
                         m("button", {onclick:  routePlanner.vm.reRoute}, "Get route"),
+                        m("div", [
+                            controller.response().paths.map(function(path, index) {
+                                return [
+                                    m("input", {id: "path-"+index, type: "radio", name: "path-tabs", checked: index === routePlanner.vm.checkedPath(), onclick: function() {
+                                        routePlanner.vm.checkedPath(index);
+                                    }}),
+                                    m("label", {"for": "path-"+index}, index+1)
+                                ];
+                            })
+                        ]),
                         m("table", [
-                            controller.response().paths[0].instructions.map(function(instruction, index) {
+                            controller.response().paths[routePlanner.vm.checkedPath()].instructions.map(function(instruction, index) {
                                 return m("tr", [m("td", JSON.stringify(instruction))])
                             })
                         ])
