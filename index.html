@@ -19,8 +19,9 @@
     };
 
     var Map = {
-        view: function() {
-            return m("div", {style: "height:180px", config: function(element, isInitialized) {
+        view: function(controller, args) {
+            return m("div", {style: "height:180px", config: function(element, isInitialized, context) {
+                context.retain = true;
                 if (!isInitialized) {
                     Map.view.mymap = L.map(element).setView([51.505, -0.09], 13);
                     L.tileLayer('http://a.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
@@ -45,8 +46,8 @@
                     Map.view.mymap.fitBounds(inputPoints.getBounds());
                 }
                 Map.view.responseLayer.clearLayers();
-                if (routePlanner.vm.response() != null) {
-                    L.geoJson(routePlanner.vm.response().paths[0].points).addTo(Map.view.responseLayer);
+                if (args.response() != null) {
+                    L.geoJson(args.response().paths[0].points).addTo(Map.view.responseLayer);
                 }
             }});
         }
@@ -56,15 +57,21 @@
     var routePlanner = {
         vm: {
             init: function() {
-                routePlanner.vm.origin = m.prop(L.latLng(52.514132, 13.496361));
-                routePlanner.vm.destination = m.prop(L.latLng(52.53314, 13.424606));
-                routePlanner.vm.response = m.prop();
+                routePlanner.vm.origin = m.prop(L.latLng(m.route.param("point")[0].split(',')));
+                routePlanner.vm.destination = m.prop(L.latLng(m.route.param("point")[1].split(',')));
+
+                routePlanner.vm.doRequest = function() {
+                    return m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false&points_encoded=false"});
+                }
             }
         },
         controller: function() {
             routePlanner.vm.init();
+            return {
+                response: routePlanner.vm.doRequest()
+            }
         },
-        view: function() {
+        view: function(controller) {
             return m("html", [
                 m("body", [
                     m("div", [
@@ -83,19 +90,19 @@
                             ])
                         ]),
                         m("button", {onclick: function() {
-                            m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false&points_encoded=false"})
-                                .then(routePlanner.vm.response);
+                            m.route("/directions?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng)
                         }}, "Get route")
                     ]),
-                    m.component(Map),
-                    m("div", JSON.stringify(routePlanner.vm.response()))
+                    m.component(Map, {response: controller.response}),
+                    m("div", JSON.stringify(controller.response()))
                 ])
             ]);
         }
     };
 
-
-    m.mount(document.body, {controller: routePlanner.controller, view: routePlanner.view});
+    m.route(document.body, "/directions?point=52.5141,13.4963&point=52.5137,13.4355", {
+        "/directions": routePlanner,
+    });
 </script>
 </body>
 </html>
