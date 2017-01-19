@@ -5,6 +5,7 @@
     <title>GraphHopper Directions</title>
     <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/0.2.5/mithril.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
 </head>
 <body>
@@ -65,12 +66,13 @@
             init: function() {
                 routePlanner.vm.origin = m.prop(L.latLng(m.route.param("point")[0].split(',')));
                 routePlanner.vm.destination = m.prop(L.latLng(m.route.param("point")[1].split(',')));
+                routePlanner.vm.time = m.prop(moment(m.route.param("time")));
                 routePlanner.vm.checkedPath = m.prop(0);
                 routePlanner.vm.doRequest = function() {
-                    return m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false&points_encoded=false"});
-                }
+                    return m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime="+routePlanner.vm.time().diff(routePlanner.vm.time().clone().startOf('day'), 'seconds')+"&use_miles=false&points_encoded=false"});
+                };
                 routePlanner.vm.reRoute = function() {
-                    m.route("/directions?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng)
+                    m.route("/directions?time="+routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")+"&point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng)
                 }
             }
         },
@@ -83,20 +85,16 @@
         view: function(controller) {
             return m("html", [
                 m("body", [
-                    m("div", {style: "float:left"}, [
-                        m("table", [
-                            m("tr", [
-                                m("td", [
-                                    m("input", {onchange: m.withAttr("value", routePlanner.vm.origin), value:routePlanner.vm.origin()})
-                                ]),
-                                m("td", "origin")
-                            ]),
-                            m("tr", [
-                                m("td", [
-                                    m("input", {onchange: m.withAttr("value", routePlanner.vm.destination), value:routePlanner.vm.destination()})
-                                ]),
-                                m("td", "destination")
-                            ])
+                    m("div", {style: "float:left;width:30%"}, [
+                        m("div", [
+                            m("input", {id: "origin", onchange: m.withAttr("value", routePlanner.vm.origin), value:routePlanner.vm.origin()}),
+                            m("label", {"for": "origin"}, "origin"),
+                            m("input", {id: "destination", onchange: m.withAttr("value", routePlanner.vm.destination), value:routePlanner.vm.destination()}),
+                            m("label", {"for": "destination"}, "destination"),
+                            m("input", {id: "time", type: "datetime-local", onchange: m.withAttr("value", function(string) {
+                                routePlanner.vm.time(moment(string));
+                            }), value: moment(routePlanner.vm.time()).format("YYYY-MM-DDTHH:mm")}),
+                            m("label", {"for": "time"}, "time")
                         ]),
                         m("button", {onclick:  routePlanner.vm.reRoute}, "Get route"),
                         m("div", [
@@ -109,6 +107,13 @@
                                 ];
                             })
                         ]),
+                        m("div", JSON.stringify(controller.response().paths[routePlanner.vm.checkedPath()], function(key,value) {
+                            if (key === "instructions" || key === "points") {
+                                return undefined;
+                            } else {
+                                return value;
+                            }
+                        })),
                         m("table", [
                             controller.response().paths[routePlanner.vm.checkedPath()].instructions.map(function(instruction, index) {
                                 return m("tr", [m("td", JSON.stringify(instruction))])
@@ -116,13 +121,19 @@
                         ])
                     ]),
                     m.component(Map, {response: controller.response}),
-                    m("div", JSON.stringify(controller.response()))
+                    m("div", JSON.stringify(controller.response(), function(key,value) {
+                        if (key === "paths") {
+                            return undefined;
+                        } else {
+                            return value;
+                        }
+                    }))
                 ])
             ]);
         }
     };
 
-    m.route(document.body, "/directions?point=52.5141,13.4963&point=52.5137,13.4355", {
+    m.route(document.body, "/directions?time="+moment(new Date()).format("YYYY-MM-DDTHH:mm")+"&point=52.5141,13.4963&point=52.5137,13.4355", {
         "/directions": routePlanner,
     });
 </script>
