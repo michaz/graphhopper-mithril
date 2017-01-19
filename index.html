@@ -45,7 +45,9 @@
                 }
                 Map.view.responseLayer.clearLayers();
                 if (args.response() != null) {
-                    L.geoJson(args.response().paths[0].points).addTo(Map.view.responseLayer);
+                    args.response().paths.forEach(function(path) {
+                        L.geoJson(path.points).addTo(Map.view.responseLayer);
+                    })
                 }
             }});
         }
@@ -75,7 +77,7 @@
         view: function(controller) {
             return m("html", [
                 m("body", [
-                    m("div", [
+                    m("div", {style: "float:left"}, [
                         m("table", [
                             m("tr", [
                                 m("td", [
@@ -90,7 +92,12 @@
                                 m("td", "destination")
                             ])
                         ]),
-                        m("button", {onclick:  routePlanner.vm.reRoute}, "Get route")
+                        m("button", {onclick:  routePlanner.vm.reRoute}, "Get route"),
+                        m("table", [
+                            controller.response().paths[0].instructions.map(function(instruction, index) {
+                                return m("tr", [m("td", JSON.stringify(instruction))])
+                            })
+                        ])
                     ]),
                     m.component(Map, {response: controller.response}),
                     m("div", JSON.stringify(controller.response()))
