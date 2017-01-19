@@ -20,25 +20,23 @@
 
     var Map = {
         view: function(controller, args) {
-            return m("div", {style: "height:180px", config: function(element, isInitialized, context) {
+            return m("div", {style: "height:800px", config: function(element, isInitialized, context) {
                 context.retain = true;
                 if (!isInitialized) {
-                    Map.view.mymap = L.map(element).setView([51.505, -0.09], 13);
+                    Map.view.mymap = L.map(element);
                     L.tileLayer('http://a.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
                         attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
                         maxZoom: 18
                     }).addTo(Map.view.mymap);
                     var origin = L.marker(routePlanner.vm.origin(),{draggable: true});
                     origin.on('dragend', function() {
-                        m.startComputation();
                         routePlanner.vm.origin(origin.getLatLng());
-                        m.endComputation();
+                        routePlanner.vm.reRoute();
                     });
                     var destination = L.marker(routePlanner.vm.destination(),{draggable: true});
                     destination.on('dragend', function() {
-                        m.startComputation();
                         routePlanner.vm.destination(destination.getLatLng());
-                        m.endComputation();
+                        routePlanner.vm.reRoute();
                     });
                     var inputPoints = L.featureGroup([origin, destination]);
                     inputPoints.addTo(Map.view.mymap);
@@ -62,6 +60,9 @@
 
                 routePlanner.vm.doRequest = function() {
                     return m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime=46200&use_miles=false&points_encoded=false"});
+                }
+                routePlanner.vm.reRoute = function() {
+                    m.route("/directions?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng)
                 }
             }
         },
@@ -89,9 +90,7 @@
                                 m("td", "destination")
                             ])
                         ]),
-                        m("button", {onclick: function() {
-                            m.route("/directions?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng)
-                        }}, "Get route")
+                        m("button", {onclick:  routePlanner.vm.reRoute}, "Get route")
                     ]),
                     m.component(Map, {response: controller.response}),
                     m("div", JSON.stringify(controller.response()))
