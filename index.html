@@ -126,7 +126,13 @@
                         })),
                         m("table", [
                             controller.response().paths[routePlanner.vm.checkedPath()].legs.map(function(leg, index) {
-                                return m("tr", [m("td", JSON.stringify(leg))])
+                                return m("tr", [m("td", JSON.stringify(leg, function(key,value) {
+                                    if (key === "edges") {
+                                        return undefined;
+                                    } else {
+                                        return value;
+                                    }
+                                }))])
                             })
                         ]),
                         m("table", [
