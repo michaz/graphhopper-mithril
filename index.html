@@ -68,11 +68,12 @@
                 routePlanner.vm.destination = m.prop(L.latLng(m.route.param("point")[1].split(',')));
                 routePlanner.vm.time = m.prop(moment(m.route.param("time")));
                 routePlanner.vm.checkedPath = m.prop(0);
+                routePlanner.vm.departArrive = m.prop(m.route.param("arriveBy") ? "arrive" : "depart");
                 routePlanner.vm.doRequest = function() {
-                    return m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime="+routePlanner.vm.time().diff(routePlanner.vm.time().clone().startOf('day'), 'seconds')+"&use_miles=false&points_encoded=false"});
+                    return m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime="+routePlanner.vm.time().diff(routePlanner.vm.time().clone().startOf('day'), 'seconds')+(routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : "") + "&use_miles=false&points_encoded=false"});
                 };
                 routePlanner.vm.reRoute = function() {
-                    m.route("/directions?time="+routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")+"&point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng)
+                    m.route("/directions?time="+routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")+"&point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+(routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : ""))
                 }
             }
         },
@@ -94,7 +95,16 @@
                             m("input", {id: "time", type: "datetime-local", onchange: m.withAttr("value", function(string) {
                                 routePlanner.vm.time(moment(string));
                             }), value: moment(routePlanner.vm.time()).format("YYYY-MM-DDTHH:mm")}),
-                            m("label", {"for": "time"}, "time")
+                            m("label", {"for": "time"}, [
+                                m("input", {id: "depart", type: "radio", name: "depart-arrive", checked: "depart" === routePlanner.vm.departArrive(), onclick: function() {
+                                    routePlanner.vm.departArrive("depart");
+                                }}),
+                                m("label", {"for": "depart"}, "departure time"),
+                                m("input", {id: "arrive", type: "radio", name: "depart-arrive", checked: "arrive" === routePlanner.vm.departArrive(), onclick: function() {
+                                    routePlanner.vm.departArrive("arrive");
+                                }}),
+                                m("label", {"for": "arrive"}, "arrival time")
+                            ])
                         ]),
                         m("button", {onclick:  routePlanner.vm.reRoute}, "Get route"),
                         m("div", [
@@ -108,12 +118,17 @@
                             })
                         ]),
                         m("div", JSON.stringify(controller.response().paths[routePlanner.vm.checkedPath()], function(key,value) {
-                            if (key === "instructions" || key === "points") {
+                            if (key === "instructions" || key === "points" || key === "legs") {
                                 return undefined;
                             } else {
                                 return value;
                             }
                         })),
+                        m("table", [
+                            controller.response().paths[routePlanner.vm.checkedPath()].legs.map(function(leg, index) {
+                                return m("tr", [m("td", JSON.stringify(leg))])
+                            })
+                        ]),
                         m("table", [
                             controller.response().paths[routePlanner.vm.checkedPath()].instructions.map(function(instruction, index) {
                                 return m("tr", [m("td", JSON.stringify(instruction))])
