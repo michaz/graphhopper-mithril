@@ -10,15 +10,6 @@
 </head>
 <body>
 <script>
-
-
-
-    var graphHopper = {
-        Request: function(data) {
-
-        }
-    };
-
     var Map = {
         view: function(controller, args) {
             return m("div", {style: "height:800px", config: function(element, isInitialized, context) {
@@ -46,15 +37,39 @@
                 }
                 Map.view.responseLayer.clearLayers();
                 if (args.response() != null) {
-                    args.response().paths.forEach(function(path, index) {
-                        var feature = L.geoJson(path.points);
-                        if (index == routePlanner.vm.checkedPath()) {
-                            feature.setStyle({color: "#00cc33", "weight": 6, "opacity": 0.8});
+                    args.response().paths.forEach(function(path, pathindex) {
+                        var pathlayer = L.layerGroup();
+                        path.legs.forEach(function(leg, index) {
+                            var linerun = L.geoJson(leg.geometry);
+                            if (leg.type === "pt") {
+                                var departurestop = L.geoJson(leg.boardStop.geometry, {pointToLayer: function(feature, latLng) {
+                                    return L.circleMarker(latLng, {radius: 5});
+                                }});
+                                if (pathindex == routePlanner.vm.checkedPath()) {
+                                    departurestop.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
+                                    linerun.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
+                                } else {
+                                    departurestop.setStyle({color: "darkgray", "weight": 6, "opacity": 1});
+                                    linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
+                                }
+                                departurestop.addTo(pathlayer);
+                            } else {
+                                if (pathindex == routePlanner.vm.checkedPath()) {
+                                    linerun.setStyle({color: "lightblue", "weight": 6, "opacity": 1});
+                                } else {
+                                    linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
+                                }
+                            }
+                            linerun.addTo(pathlayer);
+                        });
+                        // FIXME: Doesn't seem to do anything
+                        if (pathindex == routePlanner.vm.checkedPath()) {
+                            pathlayer.setZIndex(0);
                         } else {
-                            feature.setStyle({color: "darkgray", "weight": 6, "opacity": 0.8});
+                            pathlayer.setZIndex(1);
                         }
-                        feature.addTo(Map.view.responseLayer);
-                    })
+                        pathlayer.addTo(Map.view.responseLayer);
+                    });
                 }
             }});
         }
@@ -124,6 +139,23 @@
                                 return value;
                             }
                         })),
+                        m("ol", [
+                            controller.response().paths[routePlanner.vm.checkedPath()].legs.map(function(leg, index) {
+                                return m("li", [
+                                    m("div", leg.departureLocation),
+                                    leg.type === "pt" ? m("div", leg.departureTime) : [],
+                                    leg.type === "pt" ? m("div", leg.trip_headsign) : [],
+                                    leg.type === "walk" ? m("ol", leg.instructions.map(function(instruction, index) {
+                                        return m("li", JSON.stringify(instruction));
+                                    })) : [],
+                                    leg.type === "pt" ? m("ol", leg.stops.map(function(stop, index) {
+                                        return m("li", stop.name);
+                                    })) : []
+
+
+                                ])
+                            })
+                        ]),
                         m("table", [
                             controller.response().paths[routePlanner.vm.checkedPath()].legs.map(function(leg, index) {
                                 return m("tr", [m("td", JSON.stringify(leg, function(key,value) {
