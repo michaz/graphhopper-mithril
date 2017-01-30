@@ -84,11 +84,21 @@
                 routePlanner.vm.time = m.prop(moment(m.route.param("time")));
                 routePlanner.vm.checkedPath = m.prop(0);
                 routePlanner.vm.departArrive = m.prop(m.route.param("arriveBy") ? "arrive" : "depart");
+                routePlanner.vm.ignoreTransfers = m.prop(m.route.param("ignoreTransfers"));
                 routePlanner.vm.doRequest = function() {
-                    return m.request({method: "GET", url: "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+"&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime="+routePlanner.vm.time().diff(routePlanner.vm.time().clone().startOf('day'), 'seconds')+(routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : "") + "&use_miles=false&points_encoded=false"});
+                    return m.request({method: "GET", url:
+                    "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng
+                    + "&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng
+                    + "&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime="
+                    + routePlanner.vm.time().diff(routePlanner.vm.time().clone().startOf('day'), 'seconds')
+                    + (routePlanner.vm.ignoreTransfers() ? "&ignoreTransfers=true" : "")
+                    + (routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : "")
+                    + "&use_miles=false&points_encoded=false"});
                 };
                 routePlanner.vm.reRoute = function() {
-                    m.route("/directions?time="+routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")+"&point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng+(routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : ""))
+                    m.route("/directions?time="+routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")+"&point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng
+                        + (routePlanner.vm.ignoreTransfers() ? "&ignoreTransfers=true" : "")
+                        +(routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : ""))
                 }
             }
         },
@@ -119,7 +129,11 @@
                                     routePlanner.vm.departArrive("arrive");
                                 }}),
                                 m("label", {"for": "arrive"}, "arrival time")
-                            ])
+                            ]),
+                            m("input", {id: "ignoreTransfers", type: "checkbox", checked: routePlanner.vm.ignoreTransfers(), onclick: m.withAttr("checked", function(ignoreTransfers) {
+                                routePlanner.vm.ignoreTransfers(ignoreTransfers);
+                            })}),
+                            m("label", {"for": "ignoreTransfers"}, "ignore transfers")
                         ]),
                         m("button", {onclick:  routePlanner.vm.reRoute}, "Get route"),
                         m("div", [
@@ -146,13 +160,11 @@
                                     leg.type === "pt" ? m("div", leg.departureTime) : [],
                                     leg.type === "pt" ? m("div", leg.trip_headsign) : [],
                                     leg.type === "walk" ? m("ol", leg.instructions.map(function(instruction, index) {
-                                        return m("li", JSON.stringify(instruction));
+                                        return m("li", [m("div", instruction.name), m("div", instruction.time)]);
                                     })) : [],
                                     leg.type === "pt" ? m("ol", leg.stops.map(function(stop, index) {
                                         return m("li", stop.name);
                                     })) : []
-
-
                                 ])
                             })
                         ]),
