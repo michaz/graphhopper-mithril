@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>GraphHopper Directions</title>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/0.2.5/mithril.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/1.0.0/mithril.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
@@ -11,203 +11,213 @@
 <body>
 <script>
     var Map = {
-        view: function(controller, args) {
-            return m("div", {style: "height:800px", config: function(element, isInitialized, context) {
-                context.retain = true;
-                if (!isInitialized) {
-                    Map.view.mymap = L.map(element);
+        view: function(vnode) {
+            var model = vnode.attrs.model;
+            return m("div", {
+                style: "height:800px",
+                oncreate: function(vnode) {
+                    Map.view.mymap = L.map(vnode.dom);
                     L.tileLayer('http://a.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
                         attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
                         maxZoom: 18
                     }).addTo(Map.view.mymap);
-                    var origin = L.marker(routePlanner.vm.origin(),{draggable: true});
+                    var origin = L.marker(RoutePlanner.origin,{draggable: true});
                     origin.on('dragend', function() {
-                        routePlanner.vm.origin(origin.getLatLng());
-                        routePlanner.vm.reRoute();
+                        RoutePlanner.origin = origin.getLatLng();
+                        RoutePlanner.reRoute();
                     });
-                    var destination = L.marker(routePlanner.vm.destination(),{draggable: true});
+                    var destination = L.marker(RoutePlanner.destination,{draggable: true});
                     destination.on('dragend', function() {
-                        routePlanner.vm.destination(destination.getLatLng());
-                        routePlanner.vm.reRoute();
+                        RoutePlanner.destination = destination.getLatLng();
+                        RoutePlanner.reRoute();
                     });
                     var inputPoints = L.featureGroup([origin, destination]);
                     inputPoints.addTo(Map.view.mymap);
                     Map.view.responseLayer = L.featureGroup().addTo(Map.view.mymap);
                     Map.view.mymap.fitBounds(inputPoints.getBounds());
-                }
-                Map.view.responseLayer.clearLayers();
-                if (args.response() != null) {
-                    args.response().paths.forEach(function(path, pathindex) {
-                        var pathlayer = L.layerGroup();
-                        path.legs.forEach(function(leg, index) {
-                            var linerun = L.geoJson(leg.geometry);
-                            if (leg.type === "pt") {
-                                var departurestop = L.geoJson(leg.boardStop.geometry, {pointToLayer: function(feature, latLng) {
-                                    return L.circleMarker(latLng, {radius: 5});
-                                }});
-                                if (pathindex == routePlanner.vm.checkedPath()) {
-                                    departurestop.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
-                                    linerun.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
+                },
+                onupdate: function(vnode) {
+                    Map.view.responseLayer.clearLayers();
+                    if (model.response != null) {
+                        model.response.paths.forEach(function(path, pathindex) {
+                            var pathlayer = L.layerGroup();
+                            path.legs.forEach(function(leg, index) {
+                                var linerun = L.geoJson(leg.geometry);
+                                if (leg.type === "pt") {
+                                    var departurestop = L.geoJson(leg.boardStop.geometry, {pointToLayer: function(feature, latLng) {
+                                        return L.circleMarker(latLng, {radius: 5});
+                                    }});
+                                    if (pathindex == RoutePlanner.checkedPath) {
+                                        departurestop.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
+                                        linerun.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
+                                    } else {
+                                        departurestop.setStyle({color: "darkgray", "weight": 6, "opacity": 1});
+                                        linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
+                                    }
+                                    departurestop.addTo(pathlayer);
                                 } else {
-                                    departurestop.setStyle({color: "darkgray", "weight": 6, "opacity": 1});
-                                    linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
+                                    if (pathindex == RoutePlanner.checkedPath) {
+                                        linerun.setStyle({color: "lightblue", "weight": 6, "opacity": 1});
+                                    } else {
+                                        linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
+                                    }
                                 }
-                                departurestop.addTo(pathlayer);
+                                linerun.addTo(pathlayer);
+                            });
+                            // FIXME: Doesn't seem to do anything
+                            if (pathindex == RoutePlanner.checkedPath) {
+                                pathlayer.setZIndex(0);
                             } else {
-                                if (pathindex == routePlanner.vm.checkedPath()) {
-                                    linerun.setStyle({color: "lightblue", "weight": 6, "opacity": 1});
-                                } else {
-                                    linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
-                                }
+                                pathlayer.setZIndex(1);
                             }
-                            linerun.addTo(pathlayer);
+                            pathlayer.addTo(Map.view.responseLayer);
                         });
-                        // FIXME: Doesn't seem to do anything
-                        if (pathindex == routePlanner.vm.checkedPath()) {
-                            pathlayer.setZIndex(0);
-                        } else {
-                            pathlayer.setZIndex(1);
-                        }
-                        pathlayer.addTo(Map.view.responseLayer);
-                    });
+                    }
                 }
-            }});
+            });
+        }
+    };
+
+    var RoutePlanner = {
+        init: function(vnode) {
+            RoutePlanner.origin = L.latLng(vnode.attrs.origin.split(','))
+            RoutePlanner.destination = L.latLng(vnode.attrs.destination.split(','))
+            RoutePlanner.time = moment(vnode.attrs.time)
+            RoutePlanner.rangeQueryEndTime = moment(vnode.attrs.rangeQueryEndTime || vnode.attrs.time)
+            RoutePlanner.checkedPath = 0
+            RoutePlanner.departArrive = vnode.attrs.arriveBy ? "arrive" : "depart"
+            RoutePlanner.ignoreTransfers = vnode.attrs.ignoreTransfers
+        },
+        doRequest: function() {
+            return m.request({method: "GET", url:
+                "http://localhost:8990/route?point="+RoutePlanner.origin.lat+","+RoutePlanner.origin.lng
+                + "&point="+RoutePlanner.destination.lat+","+RoutePlanner.destination.lng
+                + "&locale=en-US&vehicle=pt&weighting=fastest&elevation=false"
+                + "&earliestDepartureTime=" + encodeURIComponent(RoutePlanner.time.format("YYYY-MM-DDTHH:mm"))
+                + "&rangeQueryEndTime=" + encodeURIComponent(RoutePlanner.rangeQueryEndTime.format("YYYY-MM-DDTHH:mm"))
+                + (RoutePlanner.ignoreTransfers ? "&ignoreTransfers=true" : "")
+                + (RoutePlanner.departArrive === "arrive" ? "&arriveBy=true" : "")
+                + "&use_miles=false&points_encoded=false"})
+                    .then(function (result) {
+                        RoutePlanner.response = result;
+                    });
+        },
+        reRoute: function() {
+            m.route.set(encodeURI("/directions?time="+RoutePlanner.time.format("YYYY-MM-DDTHH:mm")
+                + (RoutePlanner.rangeQueryEndTime ? "&rangeQueryEndTime="+RoutePlanner.rangeQueryEndTime.format("YYYY-MM-DDTHH:mm") : "")
+                + "&origin="+RoutePlanner.origin.lat+","+RoutePlanner.origin.lng+"&destination="+RoutePlanner.destination.lat+","+RoutePlanner.destination.lng
+                + (RoutePlanner.ignoreTransfers ? "&ignoreTransfers=true" : "")
+                + (RoutePlanner.departArrive === "arrive" ? "&arriveBy=true" : "")));
         }
     };
 
 
-    var routePlanner = {
-        vm: {
-            init: function() {
-                routePlanner.vm.origin = m.prop(L.latLng(m.route.param("point")[0].split(',')));
-                routePlanner.vm.destination = m.prop(L.latLng(m.route.param("point")[1].split(',')));
-                routePlanner.vm.time = m.prop(moment(m.route.param("time")));
-                routePlanner.vm.rangeQueryEndTime = m.prop(moment(m.route.param("rangeQueryEndTime") || m.route.param("time")));
-                routePlanner.vm.checkedPath = m.prop(0);
-                routePlanner.vm.departArrive = m.prop(m.route.param("arriveBy") ? "arrive" : "depart");
-                routePlanner.vm.ignoreTransfers = m.prop(m.route.param("ignoreTransfers"));
-                routePlanner.vm.doRequest = function() {
-                    return m.request({method: "GET", url:
-                    "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng
-                    + "&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng
-                    + "&locale=en-US&vehicle=pt&weighting=fastest&elevation=false"
-                    + "&earliestDepartureTime=" + routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")
-                    + "&rangeQueryEndTime=" + routePlanner.vm.rangeQueryEndTime().format("YYYY-MM-DDTHH:mm")
-                    + (routePlanner.vm.ignoreTransfers() ? "&ignoreTransfers=true" : "")
-                    + (routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : "")
-                    + "&use_miles=false&points_encoded=false"});
-                };
-                routePlanner.vm.reRoute = function() {
-                    m.route("/directions?time="+routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")
-                            + (routePlanner.vm.rangeQueryEndTime() ? "&rangeQueryEndTime="+routePlanner.vm.rangeQueryEndTime().format("YYYY-MM-DDTHH:mm") : "")
-                        +"&point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng
-                        + (routePlanner.vm.ignoreTransfers() ? "&ignoreTransfers=true" : "")
-                        +(routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : ""))
-                }
-            }
+    var RoutePlannerComponent = {
+        oninit: function(vnode) {
+            RoutePlanner.init(vnode);
+            RoutePlanner.doRequest();
         },
-        controller: function() {
-            routePlanner.vm.init();
-            return {
-                response: routePlanner.vm.doRequest()
-            }
-        },
-        view: function(controller) {
+        view: function(vnode) {
             return m("html", [
                 m("body", [
                     m("div", {style: "float:left;width:30%"}, [
                         m("div", [
-                            m("input", {id: "origin", onchange: m.withAttr("value", routePlanner.vm.origin), value:routePlanner.vm.origin()}),
+                            m("input", {id: "origin", onchange: m.withAttr("value", RoutePlanner.origin), value:RoutePlanner.origin}),
                             m("label", {"for": "origin"}, "origin"),
-                            m("input", {id: "destination", onchange: m.withAttr("value", routePlanner.vm.destination), value:routePlanner.vm.destination()}),
+                            m("input", {id: "destination", onchange: m.withAttr("value", RoutePlanner.destination), value:RoutePlanner.destination}),
                             m("label", {"for": "destination"}, "destination"),
                             m("input", {id: "time", type: "datetime-local", onchange: m.withAttr("value", function(string) {
-                                routePlanner.vm.time(moment(string));
-                            }), value: moment(routePlanner.vm.time()).format("YYYY-MM-DDTHH:mm")}),
+                                RoutePlanner.time = moment(string);
+                            }), value: moment(RoutePlanner.time).format("YYYY-MM-DDTHH:mm")}),
                             m("label", {"for": "time"}, [
-                                m("input", {id: "depart", type: "radio", name: "depart-arrive", checked: "depart" === routePlanner.vm.departArrive(), onclick: function() {
-                                    routePlanner.vm.departArrive("depart");
+                                m("input", {id: "depart", type: "radio", name: "depart-arrive", checked: "depart" === RoutePlanner.departArrive, onclick: function() {
+                                    RoutePlanner.departArrive = "depart";
                                 }}),
                                 m("label", {"for": "depart"}, "departure time"),
-                                m("input", {id: "arrive", type: "radio", name: "depart-arrive", checked: "arrive" === routePlanner.vm.departArrive(), onclick: function() {
-                                    routePlanner.vm.departArrive("arrive");
+                                m("input", {id: "arrive", type: "radio", name: "depart-arrive", checked: "arrive" === RoutePlanner.departArrive, onclick: function() {
+                                    RoutePlanner.departArrive = "arrive";
                                 }}),
                                 m("label", {"for": "arrive"}, "arrival time")
                             ]),
-                            m("input", {id: "ignoreTransfers", type: "checkbox", checked: routePlanner.vm.ignoreTransfers(), onclick: m.withAttr("checked", function(ignoreTransfers) {
-                                routePlanner.vm.ignoreTransfers(ignoreTransfers);
+                            m("input", {id: "ignoreTransfers", type: "checkbox", checked: RoutePlanner.ignoreTransfers, onclick: m.withAttr("checked", function(ignoreTransfers) {
+                                RoutePlanner.ignoreTransfers = ignoreTransfers;
                             })}),
                             m("label", {"for": "ignoreTransfers"}, "ignore transfers"),
                             m("input", {id: "rangeQueryEndTime", type: "datetime-local", onchange: m.withAttr("value", function(string) {
-                                routePlanner.vm.rangeQueryEndTime(moment(string));
-                            }), value: moment(routePlanner.vm.rangeQueryEndTime()).format("YYYY-MM-DDTHH:mm")}),
+                                RoutePlanner.rangeQueryEndTime = moment(string);
+                            }), value: moment(RoutePlanner.rangeQueryEndTime).format("YYYY-MM-DDTHH:mm")}),
                             m("label", {"for": "rangeQueryEndTime"}, "range query end time"),
                         ]),
-                        m("button", {onclick:  routePlanner.vm.reRoute}, "Get route"),
-                        m("div", [
-                            controller.response().paths.map(function(path, index) {
-                                return [
-                                    m("input", {id: "path-"+index, type: "radio", name: "path-tabs", checked: index === routePlanner.vm.checkedPath(), onclick: function() {
-                                        routePlanner.vm.checkedPath(index);
-                                    }}),
-                                    m("label", {"for": "path-"+index}, index+1)
-                                ];
-                            })
-                        ]),
-                        m("div", JSON.stringify(controller.response().paths[routePlanner.vm.checkedPath()], function(key,value) {
-                            if (key === "instructions" || key === "points" || key === "legs") {
-                                return undefined;
-                            } else {
-                                return value;
-                            }
-                        })),
-                        m("ol", [
-                            controller.response().paths[routePlanner.vm.checkedPath()].legs.map(function(leg, index) {
-                                return m("li", [
-                                    m("div", leg.departureLocation),
-                                    leg.type === "pt" ? m("div", leg.departureTime) : [],
-                                    leg.type === "pt" ? m("div", leg.trip_headsign) : [],
-                                    leg.type === "walk" ? m("ol", leg.instructions.map(function(instruction, index) {
-                                        return m("li", [m("div", instruction.name), m("div", instruction.time)]);
-                                    })) : [],
-                                    leg.type === "pt" ? m("ol", leg.stops.map(function(stop, index) {
-                                        return m("li", stop.name);
-                                    })) : []
-                                ])
-                            })
-                        ]),
-                        m("table", [
-                            controller.response().paths[routePlanner.vm.checkedPath()].legs.map(function(leg, index) {
-                                return m("tr", [m("td", JSON.stringify(leg, function(key,value) {
-                                    if (key === "edges") {
-                                        return undefined;
-                                    } else {
-                                        return value;
-                                    }
-                                }))])
-                            })
-                        ]),
-                        m("table", [
-                            controller.response().paths[routePlanner.vm.checkedPath()].instructions.map(function(instruction, index) {
-                                return m("tr", [m("td", JSON.stringify(instruction))])
-                            })
-                        ])
-                    ]),
-                    m.component(Map, {response: controller.response}),
-                    m("div", JSON.stringify(controller.response(), function(key,value) {
-                        if (key === "paths") {
-                            return undefined;
-                        } else {
-                            return value;
-                        }
-                    }))
+                        m("button", {onclick:  RoutePlanner.reRoute}, "Get route"),
+                        RoutePlanner.response ? [
+                            m("div", [
+                                RoutePlanner.response.paths.map(function(path, index) {
+                                    return [
+                                        m("input", {id: "path-"+index, type: "radio", name: "path-tabs", checked: index === RoutePlanner.checkedPath, onclick: function() {
+                                            RoutePlanner.checkedPath = index;
+                                        }}),
+                                        m("label", {"for": "path-"+index}, index+1)
+                                    ];
+                                })
+                            ]),
+                            m("div", JSON.stringify(RoutePlanner.response.paths[RoutePlanner.checkedPath], function(key,value) {
+                                if (key === "instructions" || key === "points" || key === "legs") {
+                                    return undefined;
+                                } else {
+                                    return value;
+                                }
+                            })),
+                            m("ol", [
+                                RoutePlanner.response.paths[RoutePlanner.checkedPath].legs.map(function(leg, index) {
+                                    return m("li", [
+                                        m("div", leg.departureLocation),
+                                        leg.type === "pt" ? m("div", leg.departureTime) : [],
+                                        leg.type === "pt" ? m("div", leg.trip_headsign) : [],
+                                        leg.type === "walk" ? m("ol", leg.instructions.map(function(instruction, index) {
+                                            return m("li", [m("div", instruction.name), m("div", instruction.time)]);
+                                        })) : [],
+                                        leg.type === "pt" ? m("ol", leg.stops.map(function(stop, index) {
+                                            return m("li", stop.name);
+                                        })) : []
+                                    ])
+                                })
+                            ]),
+                            m("table", [
+                                RoutePlanner.response.paths[RoutePlanner.checkedPath].legs.map(function(leg, index) {
+                                    return m("tr", [m("td", JSON.stringify(leg, function(key,value) {
+                                        if (key === "edges") {
+                                            return undefined;
+                                        } else {
+                                            return value;
+                                        }
+                                    }))])
+                                })
+                            ]),
+                            m("table", [
+                                RoutePlanner.response.paths[RoutePlanner.checkedPath].instructions.map(function(instruction, index) {
+                                    return m("tr", [m("td", JSON.stringify(instruction))])
+                                })
+                            ]),
+                            m("div", JSON.stringify(RoutePlanner.response, function(key,value) {
+                                if (key === "paths") {
+                                    return undefined;
+                                } else {
+                                    return value;
+                                }
+                            }))
+
+                            ]: []
+                    ]), RoutePlanner.response ? m(Map, {model: RoutePlanner}) : []
                 ])
             ]);
         }
     };
 
-    m.route(document.body, "/directions?time="+moment(new Date()).format("YYYY-MM-DDTHH:mm")+"&point=52.5141,13.4963&point=52.5137,13.4355", {
-        "/directions": routePlanner,
+    m.route(document.body, "/directions?time="+moment(new Date()).format("YYYY-MM-DDTHH:mm")+"&origin=52.5141,13.4963&destination=52.5137,13.4355", {
+        "/directions": {onmatch: function() {return RoutePlannerComponent}, render: function(vnode) {
+            vnode.key = vnode.attrs;
+            return vnode
+        }}
     });
 </script>
 </body>
