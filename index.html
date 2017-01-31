@@ -82,6 +82,7 @@
                 routePlanner.vm.origin = m.prop(L.latLng(m.route.param("point")[0].split(',')));
                 routePlanner.vm.destination = m.prop(L.latLng(m.route.param("point")[1].split(',')));
                 routePlanner.vm.time = m.prop(moment(m.route.param("time")));
+                routePlanner.vm.rangeQueryEndTime = m.prop(moment(m.route.param("rangeQueryEndTime") || m.route.param("time")));
                 routePlanner.vm.checkedPath = m.prop(0);
                 routePlanner.vm.departArrive = m.prop(m.route.param("arriveBy") ? "arrive" : "depart");
                 routePlanner.vm.ignoreTransfers = m.prop(m.route.param("ignoreTransfers"));
@@ -89,14 +90,17 @@
                     return m.request({method: "GET", url:
                     "http://localhost:8990/route?point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng
                     + "&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng
-                    + "&locale=en-US&vehicle=pt&weighting=fastest&elevation=false&earliestDepartureTime="
-                    + routePlanner.vm.time().diff(routePlanner.vm.time().clone().startOf('day'), 'seconds')
+                    + "&locale=en-US&vehicle=pt&weighting=fastest&elevation=false"
+                    + "&earliestDepartureTime=" + routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")
+                    + "&rangeQueryEndTime=" + routePlanner.vm.rangeQueryEndTime().format("YYYY-MM-DDTHH:mm")
                     + (routePlanner.vm.ignoreTransfers() ? "&ignoreTransfers=true" : "")
                     + (routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : "")
                     + "&use_miles=false&points_encoded=false"});
                 };
                 routePlanner.vm.reRoute = function() {
-                    m.route("/directions?time="+routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")+"&point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng
+                    m.route("/directions?time="+routePlanner.vm.time().format("YYYY-MM-DDTHH:mm")
+                            + (routePlanner.vm.rangeQueryEndTime() ? "&rangeQueryEndTime="+routePlanner.vm.rangeQueryEndTime().format("YYYY-MM-DDTHH:mm") : "")
+                        +"&point="+routePlanner.vm.origin().lat+","+routePlanner.vm.origin().lng+"&point="+routePlanner.vm.destination().lat+","+routePlanner.vm.destination().lng
                         + (routePlanner.vm.ignoreTransfers() ? "&ignoreTransfers=true" : "")
                         +(routePlanner.vm.departArrive() === "arrive" ? "&arriveBy=true" : ""))
                 }
@@ -133,7 +137,11 @@
                             m("input", {id: "ignoreTransfers", type: "checkbox", checked: routePlanner.vm.ignoreTransfers(), onclick: m.withAttr("checked", function(ignoreTransfers) {
                                 routePlanner.vm.ignoreTransfers(ignoreTransfers);
                             })}),
-                            m("label", {"for": "ignoreTransfers"}, "ignore transfers")
+                            m("label", {"for": "ignoreTransfers"}, "ignore transfers"),
+                            m("input", {id: "rangeQueryEndTime", type: "datetime-local", onchange: m.withAttr("value", function(string) {
+                                routePlanner.vm.rangeQueryEndTime(moment(string));
+                            }), value: moment(routePlanner.vm.rangeQueryEndTime()).format("YYYY-MM-DDTHH:mm")}),
+                            m("label", {"for": "rangeQueryEndTime"}, "range query end time"),
                         ]),
                         m("button", {onclick:  routePlanner.vm.reRoute}, "Get route"),
                         m("div", [
