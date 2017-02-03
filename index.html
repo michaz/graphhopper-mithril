@@ -23,7 +23,7 @@
                                 var departurestop = L.geoJson(leg.boardStop.geometry, {pointToLayer: function(feature, latLng) {
                                     return L.circleMarker(latLng, {radius: 5});
                                 }});
-                                if (pathindex == RoutePlanner.checkedPath) {
+                                if (pathindex == state.checkedPath) {
                                     departurestop.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
                                     linerun.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
                                 } else {
@@ -32,7 +32,7 @@
                                 }
                                 departurestop.addTo(pathlayer);
                             } else {
-                                if (pathindex == RoutePlanner.checkedPath) {
+                                if (pathindex == state.checkedPath) {
                                     linerun.setStyle({color: "lightblue", "weight": 6, "opacity": 1});
                                 } else {
                                     linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
@@ -41,7 +41,7 @@
                             linerun.addTo(pathlayer);
                         });
                         // FIXME: Doesn't seem to do anything
-                        if (pathindex == RoutePlanner.checkedPath) {
+                        if (pathindex == state.checkedPath) {
                             pathlayer.setZIndex(0);
                         } else {
                             pathlayer.setZIndex(1);
@@ -58,15 +58,15 @@
                         attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
                         maxZoom: 18
                     }).addTo(Map.view.mymap);
-                    var origin = L.marker(RoutePlanner.origin,{draggable: true});
+                    var origin = L.marker(state.origin,{draggable: true});
                     origin.on('dragend', function() {
-                        RoutePlanner.origin = origin.getLatLng();
-                        RoutePlanner.reRoute();
+                        state.origin = origin.getLatLng();
+                        state.reRoute();
                     });
-                    var destination = L.marker(RoutePlanner.destination,{draggable: true});
+                    var destination = L.marker(state.destination,{draggable: true});
                     destination.on('dragend', function() {
-                        RoutePlanner.destination = destination.getLatLng();
-                        RoutePlanner.reRoute();
+                        state.destination = destination.getLatLng();
+                        state.reRoute();
                     });
                     var inputPoints = L.featureGroup([origin, destination]);
                     inputPoints.addTo(Map.view.mymap);
@@ -82,89 +82,89 @@
         }
     };
 
-    var RoutePlanner = {
+    var state = {
         init: function(vnode) {
-            RoutePlanner.origin = L.latLng(vnode.attrs.origin.split(','))
-            RoutePlanner.destination = L.latLng(vnode.attrs.destination.split(','))
-            RoutePlanner.time = moment(vnode.attrs.time)
-            RoutePlanner.rangeQueryEndTime = moment(vnode.attrs.rangeQueryEndTime || vnode.attrs.time)
-            RoutePlanner.checkedPath = 0
-            RoutePlanner.departArrive = vnode.attrs.arriveBy ? "arrive" : "depart"
-            RoutePlanner.ignoreTransfers = vnode.attrs.ignoreTransfers
+            state.origin = L.latLng(vnode.attrs.origin.split(','))
+            state.destination = L.latLng(vnode.attrs.destination.split(','))
+            state.time = moment(vnode.attrs.time)
+            state.rangeQueryEndTime = moment(vnode.attrs.rangeQueryEndTime || vnode.attrs.time)
+            state.checkedPath = 0
+            state.departArrive = vnode.attrs.arriveBy ? "arrive" : "depart"
+            state.ignoreTransfers = vnode.attrs.ignoreTransfers
         },
         doRequest: function() {
             return m.request({method: "GET", url:
-                "http://localhost:8990/route?point="+RoutePlanner.origin.lat+","+RoutePlanner.origin.lng
-                + "&point="+RoutePlanner.destination.lat+","+RoutePlanner.destination.lng
+                "http://localhost:8990/route?point="+state.origin.lat+","+state.origin.lng
+                + "&point="+state.destination.lat+","+state.destination.lng
                 + "&locale=en-US&vehicle=pt&weighting=fastest&elevation=false"
-                + "&earliestDepartureTime=" + encodeURIComponent(RoutePlanner.time.format("YYYY-MM-DDTHH:mm"))
-                + "&rangeQueryEndTime=" + encodeURIComponent(RoutePlanner.rangeQueryEndTime.format("YYYY-MM-DDTHH:mm"))
-                + (RoutePlanner.ignoreTransfers ? "&ignoreTransfers=true" : "")
-                + (RoutePlanner.departArrive === "arrive" ? "&arriveBy=true" : "")
+                + "&earliestDepartureTime=" + encodeURIComponent(state.time.format("YYYY-MM-DDTHH:mm"))
+                + "&rangeQueryEndTime=" + encodeURIComponent(state.rangeQueryEndTime.format("YYYY-MM-DDTHH:mm"))
+                + (state.ignoreTransfers ? "&ignoreTransfers=true" : "")
+                + (state.departArrive === "arrive" ? "&arriveBy=true" : "")
                 + "&use_miles=false&points_encoded=false"})
                     .then(function (result) {
-                        RoutePlanner.response = result;
+                        state.response = result;
                     });
         },
         reRoute: function() {
-            m.route.set(encodeURI("/directions?time="+RoutePlanner.time.format("YYYY-MM-DDTHH:mm")
-                + (RoutePlanner.rangeQueryEndTime ? "&rangeQueryEndTime="+RoutePlanner.rangeQueryEndTime.format("YYYY-MM-DDTHH:mm") : "")
-                + "&origin="+RoutePlanner.origin.lat+","+RoutePlanner.origin.lng+"&destination="+RoutePlanner.destination.lat+","+RoutePlanner.destination.lng
-                + (RoutePlanner.ignoreTransfers ? "&ignoreTransfers=true" : "")
-                + (RoutePlanner.departArrive === "arrive" ? "&arriveBy=true" : "")));
+            m.route.set(encodeURI("/directions?time="+state.time.format("YYYY-MM-DDTHH:mm")
+                + (state.rangeQueryEndTime ? "&rangeQueryEndTime="+state.rangeQueryEndTime.format("YYYY-MM-DDTHH:mm") : "")
+                + "&origin="+state.origin.lat+","+state.origin.lng+"&destination="+state.destination.lat+","+state.destination.lng
+                + (state.ignoreTransfers ? "&ignoreTransfers=true" : "")
+                + (state.departArrive === "arrive" ? "&arriveBy=true" : "")));
         }
     };
 
 
-    var RoutePlannerComponent = {
+    var RoutePlanner = {
         oninit: function(vnode) {
-            RoutePlanner.init(vnode);
-            RoutePlanner.doRequest();
+            state.init(vnode);
+            state.doRequest();
         },
         view: function(vnode) {
             return m("html", [
                 m("body", [
                     m("div", {style: "float:left;width:30%"}, [
                         m("div", [
-                            m("input", {id: "origin", onchange: m.withAttr("value", RoutePlanner.origin), value:RoutePlanner.origin}),
+                            m("input", {id: "origin", onchange: m.withAttr("value", state.origin), value:state.origin}),
                             m("label", {"for": "origin"}, "origin"),
-                            m("input", {id: "destination", onchange: m.withAttr("value", RoutePlanner.destination), value:RoutePlanner.destination}),
+                            m("input", {id: "destination", onchange: m.withAttr("value", state.destination), value:state.destination}),
                             m("label", {"for": "destination"}, "destination"),
                             m("input", {id: "time", type: "datetime-local", onchange: m.withAttr("value", function(string) {
-                                RoutePlanner.time = moment(string);
-                            }), value: moment(RoutePlanner.time).format("YYYY-MM-DDTHH:mm")}),
+                                state.time = moment(string);
+                            }), value: moment(state.time).format("YYYY-MM-DDTHH:mm")}),
                             m("label", {"for": "time"}, [
-                                m("input", {id: "depart", type: "radio", name: "depart-arrive", checked: "depart" === RoutePlanner.departArrive, onclick: function() {
-                                    RoutePlanner.departArrive = "depart";
+                                m("input", {id: "depart", type: "radio", name: "depart-arrive", checked: "depart" === state.departArrive, onclick: function() {
+                                    state.departArrive = "depart";
                                 }}),
                                 m("label", {"for": "depart"}, "departure time"),
-                                m("input", {id: "arrive", type: "radio", name: "depart-arrive", checked: "arrive" === RoutePlanner.departArrive, onclick: function() {
-                                    RoutePlanner.departArrive = "arrive";
+                                m("input", {id: "arrive", type: "radio", name: "depart-arrive", checked: "arrive" === state.departArrive, onclick: function() {
+                                    state.departArrive = "arrive";
                                 }}),
                                 m("label", {"for": "arrive"}, "arrival time")
                             ]),
-                            m("input", {id: "ignoreTransfers", type: "checkbox", checked: RoutePlanner.ignoreTransfers, onclick: m.withAttr("checked", function(ignoreTransfers) {
-                                RoutePlanner.ignoreTransfers = ignoreTransfers;
+                            m("input", {id: "ignoreTransfers", type: "checkbox", checked: state.ignoreTransfers, onclick: m.withAttr("checked", function(ignoreTransfers) {
+                                state.ignoreTransfers = ignoreTransfers;
                             })}),
                             m("label", {"for": "ignoreTransfers"}, "ignore transfers"),
                             m("input", {id: "rangeQueryEndTime", type: "datetime-local", onchange: m.withAttr("value", function(string) {
-                                RoutePlanner.rangeQueryEndTime = moment(string);
-                            }), value: moment(RoutePlanner.rangeQueryEndTime).format("YYYY-MM-DDTHH:mm")}),
+                                state.rangeQueryEndTime = moment(string);
+                            }), value: moment(state.rangeQueryEndTime).format("YYYY-MM-DDTHH:mm")}),
                             m("label", {"for": "rangeQueryEndTime"}, "range query end time"),
                         ]),
-                        m("button", {onclick:  RoutePlanner.reRoute}, "Get route"),
-                        RoutePlanner.response ? [
+                        m("button", {onclick:  state.reRoute}, "Get route"),
+                        state.response ? [
                             m("div", [
-                                RoutePlanner.response.paths.map(function(path, index) {
+                                state.response.paths.map(function(path, index) {
                                     return [
-                                        m("input", {id: "path-"+index, type: "radio", name: "path-tabs", checked: index === RoutePlanner.checkedPath, onclick: function() {
-                                            RoutePlanner.checkedPath = index;
+                                        m("input", {id: "path-"+index, type: "radio", name: "path-tabs", checked: index === state.checkedPath, onclick: function() {
+                                            state.checkedPath = index;
                                         }}),
                                         m("label", {"for": "path-"+index}, index+1)
                                     ];
                                 })
                             ]),
-                            m("div", JSON.stringify(RoutePlanner.response.paths[RoutePlanner.checkedPath], function(key,value) {
+                            m("div", JSON.stringify(state.response.paths[state.checkedPath], function(key,value) {
                                 if (key === "instructions" || key === "points" || key === "legs") {
                                     return undefined;
                                 } else {
@@ -172,7 +172,7 @@
                                 }
                             })),
                             m("ol", [
-                                RoutePlanner.response.paths[RoutePlanner.checkedPath].legs.map(function(leg, index) {
+                                state.response.paths[state.checkedPath].legs.map(function(leg, index) {
                                     return m("li", [
                                         m("div", leg.departureLocation),
                                         leg.type === "pt" ? m("div", leg.departureTime) : [],
@@ -187,7 +187,7 @@
                                 })
                             ]),
                             m("table", [
-                                RoutePlanner.response.paths[RoutePlanner.checkedPath].legs.map(function(leg, index) {
+                                state.response.paths[state.checkedPath].legs.map(function(leg, index) {
                                     return m("tr", [m("td", JSON.stringify(leg, function(key,value) {
                                         if (key === "edges") {
                                             return undefined;
@@ -198,11 +198,11 @@
                                 })
                             ]),
                             m("table", [
-                                RoutePlanner.response.paths[RoutePlanner.checkedPath].instructions.map(function(instruction, index) {
+                                state.response.paths[state.checkedPath].instructions.map(function(instruction, index) {
                                     return m("tr", [m("td", JSON.stringify(instruction))])
                                 })
                             ]),
-                            m("div", JSON.stringify(RoutePlanner.response, function(key,value) {
+                            m("div", JSON.stringify(state.response, function(key,value) {
                                 if (key === "paths") {
                                     return undefined;
                                 } else {
@@ -211,14 +211,14 @@
                             }))
 
                             ]: []
-                    ]), RoutePlanner.response ? m(Map, {model: RoutePlanner}) : []
+                    ]), state.response ? m(Map, {model: state}) : []
                 ])
             ]);
         }
     };
 
     m.route(document.body, "/directions?time="+moment(new Date()).format("YYYY-MM-DDTHH:mm")+"&origin=52.5141,13.4963&destination=52.5137,13.4355", {
-        "/directions": {onmatch: function() {return RoutePlannerComponent}, render: function(vnode) {
+        "/directions": {onmatch: function() {return RoutePlanner}, render: function(vnode) {
             vnode.key = vnode.attrs;
             return vnode
         }}
