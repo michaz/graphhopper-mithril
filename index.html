@@ -13,6 +13,43 @@
     var Map = {
         view: function(vnode) {
             var model = vnode.attrs.model;
+            var addLayersToResponseLayer = function() {
+                if (model.response != null) {
+                    model.response.paths.forEach(function(path, pathindex) {
+                        var pathlayer = L.layerGroup();
+                        path.legs.forEach(function(leg, index) {
+                            var linerun = L.geoJson(leg.geometry);
+                            if (leg.type === "pt") {
+                                var departurestop = L.geoJson(leg.boardStop.geometry, {pointToLayer: function(feature, latLng) {
+                                    return L.circleMarker(latLng, {radius: 5});
+                                }});
+                                if (pathindex == RoutePlanner.checkedPath) {
+                                    departurestop.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
+                                    linerun.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
+                                } else {
+                                    departurestop.setStyle({color: "darkgray", "weight": 6, "opacity": 1});
+                                    linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
+                                }
+                                departurestop.addTo(pathlayer);
+                            } else {
+                                if (pathindex == RoutePlanner.checkedPath) {
+                                    linerun.setStyle({color: "lightblue", "weight": 6, "opacity": 1});
+                                } else {
+                                    linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
+                                }
+                            }
+                            linerun.addTo(pathlayer);
+                        });
+                        // FIXME: Doesn't seem to do anything
+                        if (pathindex == RoutePlanner.checkedPath) {
+                            pathlayer.setZIndex(0);
+                        } else {
+                            pathlayer.setZIndex(1);
+                        }
+                        pathlayer.addTo(Map.view.responseLayer);
+                    });
+                }
+            };
             return m("div", {
                 style: "height:800px",
                 oncreate: function(vnode) {
@@ -35,44 +72,11 @@
                     inputPoints.addTo(Map.view.mymap);
                     Map.view.responseLayer = L.featureGroup().addTo(Map.view.mymap);
                     Map.view.mymap.fitBounds(inputPoints.getBounds());
+                    addLayersToResponseLayer();
                 },
                 onupdate: function(vnode) {
                     Map.view.responseLayer.clearLayers();
-                    if (model.response != null) {
-                        model.response.paths.forEach(function(path, pathindex) {
-                            var pathlayer = L.layerGroup();
-                            path.legs.forEach(function(leg, index) {
-                                var linerun = L.geoJson(leg.geometry);
-                                if (leg.type === "pt") {
-                                    var departurestop = L.geoJson(leg.boardStop.geometry, {pointToLayer: function(feature, latLng) {
-                                        return L.circleMarker(latLng, {radius: 5});
-                                    }});
-                                    if (pathindex == RoutePlanner.checkedPath) {
-                                        departurestop.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
-                                        linerun.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
-                                    } else {
-                                        departurestop.setStyle({color: "darkgray", "weight": 6, "opacity": 1});
-                                        linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
-                                    }
-                                    departurestop.addTo(pathlayer);
-                                } else {
-                                    if (pathindex == RoutePlanner.checkedPath) {
-                                        linerun.setStyle({color: "lightblue", "weight": 6, "opacity": 1});
-                                    } else {
-                                        linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
-                                    }
-                                }
-                                linerun.addTo(pathlayer);
-                            });
-                            // FIXME: Doesn't seem to do anything
-                            if (pathindex == RoutePlanner.checkedPath) {
-                                pathlayer.setZIndex(0);
-                            } else {
-                                pathlayer.setZIndex(1);
-                            }
-                            pathlayer.addTo(Map.view.responseLayer);
-                        });
-                    }
+                    addLayersToResponseLayer();
                 }
             });
         }
@@ -174,7 +178,7 @@
                                         leg.type === "pt" ? m("div", leg.departureTime) : [],
                                         leg.type === "pt" ? m("div", leg.trip_headsign) : [],
                                         leg.type === "walk" ? m("ol", leg.instructions.map(function(instruction, index) {
-                                            return m("li", [m("div", instruction.name), m("div", instruction.time)]);
+                                            return m("li", [m("div", instruction.text), m("div", instruction.time > 0 ? moment.duration(instruction.time).humanize() : [])]);
                                         })) : [],
                                         leg.type === "pt" ? m("ol", leg.stops.map(function(stop, index) {
                                             return m("li", stop.name);
