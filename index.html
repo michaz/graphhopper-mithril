@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>GraphHopper Directions</title>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/1.0.0/mithril.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/1.1.1/mithril.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" />
 </head>
 <body>
 <script>
@@ -16,7 +16,7 @@
             var addLayersToResponseLayer = function() {
                 if (model.response != null) {
                     model.response.paths.forEach(function(path, pathindex) {
-                        var pathlayer = L.layerGroup();
+                        var pathlayer = L.featureGroup();
                         path.legs.forEach(function(leg, index) {
                             var linerun = L.geoJson(leg.geometry);
                             if (leg.type === "pt") {
@@ -27,7 +27,7 @@
                                     departurestop.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
                                     linerun.setStyle({color: "#00cc33", "weight": 6, "opacity": 1});
                                 } else {
-                                    departurestop.setStyle({color: "darkgray", "weight": 6, "opacity": 1});
+                                    departurestop.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
                                     linerun.setStyle({color: "darkgray", "weight": 6, "opacity": 0.6});
                                 }
                                 departurestop.addTo(pathlayer);
@@ -40,14 +40,9 @@
                             }
                             linerun.addTo(pathlayer);
                         });
-                        // FIXME: Doesn't seem to do anything
-                        if (pathindex == state.checkedPath) {
-                            pathlayer.setZIndex(0);
-                        } else {
-                            pathlayer.setZIndex(1);
-                        }
                         pathlayer.addTo(Map.view.responseLayer);
                     });
+                    Map.view.responseLayer.getLayers()[state.checkedPath].bringToFront();
                 }
             };
             return m("div", {
@@ -175,6 +170,7 @@
                                 state.response.paths[state.checkedPath].legs.map(function(leg, index) {
                                     return m("li", [
                                         m("div", leg.departureLocation),
+                                        m("div", leg.distance),
                                         leg.type === "pt" ? m("div", leg.departureTime) : [],
                                         leg.type === "pt" ? m("div", leg.trip_headsign) : [],
                                         leg.type === "walk" ? m("ol", leg.instructions.map(function(instruction, index) {
@@ -189,11 +185,11 @@
                             m("table", [
                                 state.response.paths[state.checkedPath].legs.map(function(leg, index) {
                                     return m("tr", [m("td", JSON.stringify(leg, function(key,value) {
-                                        if (key === "edges") {
-                                            return undefined;
-                                        } else {
+//                                        if (key === "edges") {
+//                                            return undefined;
+//                                        } else {
                                             return value;
-                                        }
+//                                        }
                                     }))])
                                 })
                             ]),
