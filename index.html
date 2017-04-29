@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>GraphHopper Directions</title>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/1.1.1/mithril.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/mithril/1.1.1/mithril.js"></script>
     <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" />
@@ -92,8 +92,8 @@
                 "http://localhost:8990/route?point="+state.origin.lat+","+state.origin.lng
                 + "&point="+state.destination.lat+","+state.destination.lng
                 + "&locale=en-US&vehicle=pt&weighting=fastest&elevation=false"
-                + "&earliestDepartureTime=" + encodeURIComponent(state.time.format("YYYY-MM-DDTHH:mm"))
-                + "&rangeQueryEndTime=" + encodeURIComponent(state.rangeQueryEndTime.format("YYYY-MM-DDTHH:mm"))
+                + "&earliestDepartureTime=" + encodeURIComponent(state.time.toISOString())
+                + "&rangeQueryEndTime=" + encodeURIComponent(state.rangeQueryEndTime.toISOString())
                 + (state.ignoreTransfers ? "&ignoreTransfers=true" : "")
                 + (state.departArrive === "arrive" ? "&arriveBy=true" : "")
                 + "&use_miles=false&points_encoded=false"})
@@ -102,8 +102,8 @@
                     });
         },
         reRoute: function() {
-            m.route.set(encodeURI("/directions?time="+state.time.format("YYYY-MM-DDTHH:mm")
-                + (state.rangeQueryEndTime ? "&rangeQueryEndTime="+state.rangeQueryEndTime.format("YYYY-MM-DDTHH:mm") : "")
+            m.route.set(encodeURI("/directions?time="+moment(state.time).toISOString()
+                + (state.rangeQueryEndTime ? "&rangeQueryEndTime="+moment(state.rangeQueryEndTime).toISOString() : "")
                 + "&origin="+state.origin.lat+","+state.origin.lng+"&destination="+state.destination.lat+","+state.destination.lng
                 + (state.ignoreTransfers ? "&ignoreTransfers=true" : "")
                 + (state.departArrive === "arrive" ? "&arriveBy=true" : "")));
@@ -126,7 +126,7 @@
                             m("input", {id: "destination", onchange: m.withAttr("value", state.destination), value:state.destination}),
                             m("label", {"for": "destination"}, "destination"),
                             m("input", {id: "time", type: "datetime-local", onchange: m.withAttr("value", function(string) {
-                                state.time = moment(string);
+                                state.time = moment(string).toISOString();
                             }), value: moment(state.time).format("YYYY-MM-DDTHH:mm")}),
                             m("label", {"for": "time"}, [
                                 m("input", {id: "depart", type: "radio", name: "depart-arrive", checked: "depart" === state.departArrive, onclick: function() {
@@ -143,7 +143,7 @@
                             })}),
                             m("label", {"for": "ignoreTransfers"}, "ignore transfers"),
                             m("input", {id: "rangeQueryEndTime", type: "datetime-local", onchange: m.withAttr("value", function(string) {
-                                state.rangeQueryEndTime = moment(string);
+                                state.rangeQueryEndTime = moment(string).toISOString();
                             }), value: moment(state.rangeQueryEndTime).format("YYYY-MM-DDTHH:mm")}),
                             m("label", {"for": "rangeQueryEndTime"}, "range query end time"),
                         ]),
@@ -171,14 +171,15 @@
                                     return m("li", [
                                         m("div", leg.departureLocation),
                                         m("div", leg.distance),
-                                        leg.type === "pt" ? m("div", leg.departureTime) : [],
+                                        m("div", leg.departureTime),
                                         leg.type === "pt" ? m("div", leg.trip_headsign) : [],
                                         leg.type === "walk" ? m("ol", leg.instructions.map(function(instruction, index) {
                                             return m("li", [m("div", instruction.text), m("div", instruction.time > 0 ? moment.duration(instruction.time).humanize() : [])]);
                                         })) : [],
                                         leg.type === "pt" ? m("ol", leg.stops.map(function(stop, index) {
-                                            return m("li", stop.name);
-                                        })) : []
+                                            return m("li", m("div", m("div", stop.arrivalTime), m("div", stop.name), m("div", stop.departureTime)));
+                                        })) : [],
+                                        m("div", leg.arrivalTime)
                                     ])
                                 })
                             ]),
@@ -213,7 +214,7 @@
         }
     };
 
-    m.route(document.body, "/directions?time="+moment(new Date()).format("YYYY-MM-DDTHH:mm")+"&origin=52.5141,13.4963&destination=52.5137,13.4355", {
+    m.route(document.body, "/directions?time="+moment(new Date()).toISOString()+"&origin=52.5141,13.4963&destination=52.5137,13.4355", {
         "/directions": {onmatch: function() {return RoutePlanner}, render: function(vnode) {
             vnode.key = vnode.attrs;
             return vnode
