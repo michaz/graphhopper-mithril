@@ -92,8 +92,8 @@
                 "http://localhost:8990/route?point="+state.origin.lat+","+state.origin.lng
                 + "&point="+state.destination.lat+","+state.destination.lng
                 + "&locale=en-US&vehicle=pt&weighting=fastest&elevation=false"
-                + "&earliestDepartureTime=" + encodeURIComponent(state.time.toISOString())
-                + "&rangeQueryEndTime=" + encodeURIComponent(state.rangeQueryEndTime.toISOString())
+                + "&pt.earliestDepartureTime=" + encodeURIComponent(state.time.toISOString())
+                + "&pt.rangeQueryEndTime=" + encodeURIComponent(state.rangeQueryEndTime.toISOString())
                 + (state.ignoreTransfers ? "&ignoreTransfers=true" : "")
                 + (state.departArrive === "arrive" ? "&arriveBy=true" : "")
                 + "&use_miles=false&points_encoded=false"})
@@ -121,31 +121,42 @@
                 m("body", [
                     m("div", {style: "float:left;width:30%"}, [
                         m("div", [
-                            m("input", {id: "origin", onchange: m.withAttr("value", state.origin), value:state.origin}),
-                            m("label", {"for": "origin"}, "origin"),
-                            m("input", {id: "destination", onchange: m.withAttr("value", state.destination), value:state.destination}),
-                            m("label", {"for": "destination"}, "destination"),
-                            m("input", {id: "time", type: "datetime-local", onchange: m.withAttr("value", function(string) {
-                                state.time = moment(string).toISOString();
-                            }), value: moment(state.time).format("YYYY-MM-DDTHH:mm")}),
-                            m("label", {"for": "time"}, [
-                                m("input", {id: "depart", type: "radio", name: "depart-arrive", checked: "depart" === state.departArrive, onclick: function() {
-                                    state.departArrive = "depart";
-                                }}),
-                                m("label", {"for": "depart"}, "departure time"),
-                                m("input", {id: "arrive", type: "radio", name: "depart-arrive", checked: "arrive" === state.departArrive, onclick: function() {
-                                    state.departArrive = "arrive";
-                                }}),
-                                m("label", {"for": "arrive"}, "arrival time")
+                            m("div", [
+                                m("input", {id: "origin", onchange: m.withAttr("value", state.origin), value:state.origin}),
+                                m("label", {"for": "origin"}, "origin"),
+
                             ]),
-                            m("input", {id: "ignoreTransfers", type: "checkbox", checked: state.ignoreTransfers, onclick: m.withAttr("checked", function(ignoreTransfers) {
-                                state.ignoreTransfers = ignoreTransfers;
-                            })}),
-                            m("label", {"for": "ignoreTransfers"}, "ignore transfers"),
-                            m("input", {id: "rangeQueryEndTime", type: "datetime-local", onchange: m.withAttr("value", function(string) {
-                                state.rangeQueryEndTime = moment(string).toISOString();
-                            }), value: moment(state.rangeQueryEndTime).format("YYYY-MM-DDTHH:mm")}),
-                            m("label", {"for": "rangeQueryEndTime"}, "range query end time"),
+                            m("div", [
+                                m("input", {id: "destination", onchange: m.withAttr("value", state.destination), value:state.destination}),
+                                m("label", {"for": "destination"}, "destination"),
+                            ]),
+                            m("div", [
+                                m("input", {id: "time", type: "datetime-local", onchange: m.withAttr("value", function(string) {
+                                    state.time = moment(string).toISOString();
+                                }), value: moment(state.time).format("YYYY-MM-DDTHH:mm")}),
+                                m("label", {"for": "time"}, [
+                                    m("input", {id: "depart", type: "radio", name: "depart-arrive", checked: "depart" === state.departArrive, onclick: function() {
+                                        state.departArrive = "depart";
+                                    }}),
+                                    m("label", {"for": "depart"}, "departure time"),
+                                    m("input", {id: "arrive", type: "radio", name: "depart-arrive", checked: "arrive" === state.departArrive, onclick: function() {
+                                        state.departArrive = "arrive";
+                                    }}),
+                                    m("label", {"for": "arrive"}, "arrival time")
+                                ]),
+                            ]),
+                            m("div"), [
+                                m("input", {id: "ignoreTransfers", type: "checkbox", checked: state.ignoreTransfers, onclick: m.withAttr("checked", function(ignoreTransfers) {
+                                    state.ignoreTransfers = ignoreTransfers;
+                                })}),
+                                m("label", {"for": "ignoreTransfers"}, "ignore transfers"),
+                            ],
+                            m("div", [
+                                m("input", {id: "rangeQueryEndTime", type: "datetime-local", onchange: m.withAttr("value", function(string) {
+                                    state.rangeQueryEndTime = moment(string).toISOString();
+                                }), value: moment(state.rangeQueryEndTime).format("YYYY-MM-DDTHH:mm")}),
+                                m("label", {"for": "rangeQueryEndTime"}, "range query end time"),
+                            ])
                         ]),
                         m("button", {onclick:  state.reRoute}, "Get route"),
                         state.response ? [
